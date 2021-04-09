@@ -1,5 +1,11 @@
-# build environment
-FROM nodejs14 as builder
+ARG BUILD_REGISTRY=registry1.dso.mil
+ARG BUILD_IMAGE=ironbank/opensource/nodejs/nodejs14
+ARG BUILD_TAG=latest
+ARG BASE_REGISTRY=registry.il2.dso.mil
+ARG BASE_IMAGE=platform-one/devops/pipeline-templates/base-image/harden-nginx-19
+ARG BASE_TAG=1.19.6
+# our base build image
+FROM ${BUILD_REGISTRY}/${BUILD_IMAGE}:${BUILD_TAG} as builder
 
 # set working directory
 #RUN mkdir /usr/src/app
@@ -15,25 +21,9 @@ COPY . /home/node
 
 RUN npm run build --output-path=dist
 
-FROM apache2-hardened-fixed
+FROM ${BASE_REGISTRY}/${BASE_IMAGE}:${BASE_TAG}
 
 # copy compiled app to server
-COPY --from=builder /home/node/dist/hygieia-ui /var/www/html
+COPY --from=builder /home/node/dist/hygieia-ui /var/www/
 
-COPY ./httpd/.htaccess /var/www/html/.htaccess
-
-# copy startup script
-COPY ./startup.sh /etc/httpd/startup.sh
-
-# make script executable
-USER root
-RUN chown apache:apache /etc/httpd/startup.sh && chown -R apache:apache /var/www/html
-
-RUN chmod +x /etc/httpd/startup.sh
-USER apache
-# expose port 80
-EXPOSE 80
-
-ENTRYPOINT ["/etc/httpd/startup.sh"]
-
-CMD ["httpd" "-D", "FOREGROUND"]
+COPY ./httpd/.htaccess /var/www/.htaccess
