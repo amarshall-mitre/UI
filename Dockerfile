@@ -26,4 +26,12 @@ FROM ${BASE_REGISTRY}/${BASE_IMAGE}:${BASE_TAG}
 # copy compiled app to server
 COPY --from=builder /home/node/dist/hygieia-ui /var/www/
 
+USER root
+
+#COPY --chown=appuser nginx-proxy.conf /etc/nginx/
+
+RUN sed -i -e s/location/location\ \\/api\\/\ \{\ proxy_pass\ http\:\\/\\/api\:8080\\/api\\/\;\ \}\\n\\rlocation/ /etc/nginx/nginx.conf
+
+USER appuser
+
 COPY ./httpd/.htaccess /var/www/.htaccess
